@@ -6,15 +6,17 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 export default async function handler(req, res) {
+  // === DODAJ TE LINIE ===
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end(); // Preflight request
+  
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
   }
+  // ======================
 
-  if (req.method !== 'POST') {
+  if (req.method !== "POST") {
     return res.status(405).end(); // Method not allowed
   }
 
@@ -22,7 +24,7 @@ export default async function handler(req, res) {
 
   try {
     const completion = await openai.createChatCompletion({
-      model: "gpt-4", // lub "gpt-3.5-turbo" jak chcesz taniej
+      model: "gpt-4",
       messages: [{ role: "user", content: message }]
     });
 
