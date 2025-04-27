@@ -1,4 +1,3 @@
-// api/chat.js
 import OpenAI from "openai";
 
 const openai = new OpenAI({
@@ -6,7 +5,7 @@ const openai = new OpenAI({
 });
 
 export default async function handler(req, res) {
-  // CORS
+  // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -25,7 +24,7 @@ export default async function handler(req, res) {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",        // lub "gpt-3.5-turbo"
+      model: "gpt-4",
       messages: [{ role: "user", content: message }]
     });
 
