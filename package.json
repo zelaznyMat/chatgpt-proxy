@@ -1,5 +1,5 @@
 {
-  "name": "chatgpt-proxy",
+  "name": "chatgpt-proxy-jet",
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
