@@ -6,23 +6,29 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end(); // Preflight request
+  }
+
   if (req.method !== 'POST') {
-    return res.status(405).end(); // Tylko POST dozwolone
+    return res.status(405).end(); // Method not allowed
   }
 
   const { message } = req.body;
 
   try {
     const completion = await openai.createChatCompletion({
-      model: "gpt-4", // lub gpt-3.5-turbo jeśli wolisz
+      model: "gpt-4", // lub "gpt-3.5-turbo" jak chcesz taniej
       messages: [{ role: "user", content: message }]
     });
 
-    res.status(200).json({ reply: 
-completion.data.choices[0].message.content });
+    res.status(200).json({ reply: completion.data.choices[0].message.content });
   } catch (error) {
     console.error(error.response?.data || error.message);
-    res.status(500).json({ error: "Coś poszło nie tak." });
+    res.status(500).json({ error: "Błąd podczas kontaktu z OpenAI" });
   }
 }
-
