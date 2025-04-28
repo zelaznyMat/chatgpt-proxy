@@ -63,41 +63,40 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Pobieramy aktywne produkty
+    // 1) Pobieramy produkty
     const products = await fetchProducts();
 
-    // Wyszukujemy te, które pasują
+    // 2) Filtrujemy i wybieramy do 5 najlepszych
     let found = searchProducts(products, message);
     if (found.length === 0) {
-      // brak wyników → losujemy 5
-      found = products.sort(() => 0.5 - Math.random()).slice(0,5);
+      // gdy brak trafień → losowe 5 jako propozycje
+      found = products.sort(() => 0.5 - Math.random()).slice(0, 5);
     } else {
-      // ograniczamy do 5 najlepszych
-      found = found.slice(0,5);
+      found = found.slice(0, 5);
     }
 
-    // Budujemy tekst prompta z listą produktów
+    // 3) Przygotowujemy tekst do prompta
     const productDescriptions = found.map(p => {
       const url = `https://lalkametoo.pl/product/${p.product_id}`;
       const img = p.main_image?.path || "";
       const desc = p.short_description || p.description || "– brak opisu –";
-      return `- **${p.name}**\nCena: ${p.price} zł\nOpis: ${desc}\nZdjęcie: ${img}\nLink: ${url}\n`;
-    }).join("\n");
+      return `- **${p.name}**\nCena: ${p.price} zł\nOpis: ${desc}\nZdjęcie: ${img}\nLink: ${url}`;
+    }).join("\n\n");
 
-    // System prompt
+    // 4) Nowy, ulepszony system prompt – zawsze prezentujemy listę produktów:
     const systemMessage = {
       role: "system",
       content: `
 Jesteś doradcą klienta sklepu lalkametoo.pl.
-Odpowiadaj na podstawie poniższej listy produktów (nazwa, cena, opis, zdjęcie, link).
-Jeśli klient pyta o coś, czego nie ma – powiedz to uprzejmie.
-
-Dostępne produkty:
+Zawsze przedstaw poniższą listę produktów jako propozycje:
 ${productDescriptions}
+
+Jeśli klient pyta o coś konkretnego, wskaż najbardziej pasujące produkty z tej listy. 
+Jeżeli zapytanie nie pasuje dokładnie, zaproponuj alternatywy, podając nazwę, cenę, krótki opis, zdjęcie i link.
       `.trim()
     };
 
-    // Wywołanie GPT-4
+    // 5) Wywołujemy GPT-4
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
