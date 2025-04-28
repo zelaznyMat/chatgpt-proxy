@@ -1,13 +1,32 @@
-// api/chat.js
 import OpenAI from "openai";
-import fetch from "node-fetch";
+import fetch from "node-fetch"; // potrzebny, bo na Vercel backend nie ma fetch domyślnie
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+// Funkcja pobierająca aktywne produkty z Shopera
+async function fetchProducts() {
+  try {
+    const res = await fetch(
+      'https://lalkametoo.shoper.pl/webapi/rest/products?filter[active]=1',
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + process.env.SHOPER_API_TOKEN
+        }
+      }
+    );
+    const data = await res.json();
+    return data.list || [];
+  } catch (error) {
+    console.error('Błąd pobierania produktów:', error);
+    return [];
+  }
+}
+
 export default async function handler(req, res) {
-  // CORS
+  // CORS - obsługa przeglądarki
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -15,45 +34,34 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
   const { message } = req.body;
-  if (!message) return res.status(400).json({ error: "Brak parametru message" });
+  if (!message) return res.status(400).json({ error: "Brak wiadomości" });
 
-  // Pobranie treści sklepu
-  let shopText = "";
-  try {
-    const pageRes = await fetch("https://lalkametoo.pl");
-    const html = await pageRes.text();
-    shopText = html
-      .replace(/<script[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .substring(0, 3000);
-  } catch(e) {
-    console.error("Błąd podczas pobierania strony sklepu:", e);
-  }
+  // Pobieramy produkty ze sklepu
+  const products = await fetchProducts();
 
-  // System prompt z treścią sklepu
-  const systemMessage = {
-    role: "system",
-    content: `
-Jesteś asystentem dla klientów detalicznych sklepu lalkametoo.pl.
-Na podstawie poniższej treści oferty i informacji ze strony udzielaj pomocnych odpowiedzi:
+  // Tworzymy opis produktów do prompta
+  const productDescriptions = products.slice(0, 20).map(p => {
+    return `- ${p.name}: ${p.short_description || p.description || "brak opisu"}`;
+  }).join('\n');
 
-=== TREŚĆ SKLEPU ===
-${shopText}
-=== KONIEC TREŚCI ===
-    `.trim()
-  };
+  const systemContent = `
+Jesteś pomocnym asystentem dla klientów sklepu lalkametoo.pl.
+Oto aktualna oferta sklepu:
+
+${productDescriptions}
+
+Na podstawie powyższych informacji odpowiadaj klientom detalicznym.
+Jeśli pytanie dotyczy produktu spoza listy lub brak jest danych, uprzejmie poinformuj o tym.
+  `.trim();
 
   const messages = [
-    systemMessage,
+    { role: "system", content: systemContent },
     { role: "user", content: message }
   ];
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",         // teraz używamy gpt-4
+      model: "gpt-4",
       messages
     });
 
